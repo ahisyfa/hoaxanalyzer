@@ -17,6 +17,7 @@ class MNNB extends Controller
 {
 
     public function run(){
+        /// Ada perubahan  di branch revisi
         for($i=1; $i<= 10; $i++){
             $this->doClassify($i);
         }
