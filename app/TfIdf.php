@@ -9,6 +9,7 @@ class TfIdf extends BaseModel
     
 	public static function generate()
 	{
+        echo "TfIdf::generate() \r\n";
 
 		TfIdf::truncate();
 		
@@ -25,6 +26,8 @@ class TfIdf extends BaseModel
 				$tfidf->document = $tdm->document;
 				$tfidf->class = $tdm->class;
 				$tfidf->save();
+
+                echo "TfIdf::generate() -> memproses term : {$tdm->term}, dokumen {$tdm->document}\r\n";
 			}
 
 		}
