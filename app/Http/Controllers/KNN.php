@@ -21,7 +21,13 @@ class KNN extends Controller
         date_default_timezone_set('Asia/Jakarta');
     }
 
-    // $knn = new \App\Http\Controllers\KNN(); $knn->run();
+    /**
+     * Akses poi untuk memulai penelitin.
+     *
+     * c
+     *
+     * @param int $K banyaknya k pada KNNN
+     */
     public function run($K = 5){
         echo "KNN::run({$K}) \r\n";
         for ($i = 1; $i <= 10; $i++){
@@ -29,6 +35,13 @@ class KNN extends Controller
         }
     }
 
+    /**
+     * Helper klasifikasi
+     *
+     * @param int $K
+     * @param int $fold
+     * @return int
+     */
     public function doClassify($K  = 5, $fold = 1){
         echo "KNN::doClassify(K={$K}, Fold={$fold}) \r\n";
 
@@ -66,11 +79,14 @@ class KNN extends Controller
     }
 
     /**
+     * Proses Klasifikasi KNN
+     *
      * @param $log_handle
      * @param $K
      * @param $fold
+     * @return bool
      */
-    public function knnClassifier($log_handle, $K, $fold){
+    public function knnClassifier( & $log_handle, $K, $fold){
         echo "KNN::knnClassifier(K={$K}, Fold={$fold}) \r\n";
 
         // Confusion matrix
@@ -100,6 +116,8 @@ class KNN extends Controller
 
             // Tentukan kelas aktualnya
             $KELAS_AKTUAL = $dokumen_uji <= 300 ? 'HOAX' : 'NONHOAX';
+            fwrite($log_handle, ($i+1) . ". Mengklasifikasi Doc {$dokumen_uji} [{$KELAS_AKTUAL}] \r\n");
+
 
             echo "knnClassifier :: Sedang memproses dokumen uji : {$dokumen_uji} \r\n";
             $this->seleksi_fitur($dokumen_uji, $list_dokumen_uji);
@@ -142,6 +160,9 @@ class KNN extends Controller
             $non_hoax = 0;
             $banyak_vote = 0;
 
+            fwrite($log_handle, "   Voting : \r\n");
+
+
             foreach($jarak_knn as $r_doc_id => $r_jarak ){
                 if($banyak_vote == $K ){
                     break;
@@ -152,18 +173,21 @@ class KNN extends Controller
                 } else {
                     $non_hoax++;
                 }
+
+                fwrite($log_handle, "   - Doc {$r_doc_id} : $r_jarak \r\n");
+
                 $banyak_vote++;
             }
 
             if ($hoax > $non_hoax ){
                 $KELAS_PREDIKSI = "HOAX";
-                echo "    HASILNYA  doc_id: {$dokumen_uji} adalah HOAX \n";
-                fwrite($log_handle, " hasil : HOAX \r\n");
             } else {
                 $KELAS_PREDIKSI = "NONHOAX";
-                echo "    HASILNYA  doc_id: {$dokumen_uji} adalah NONHOAX \n";
-                fwrite($log_handle, " hasil : NONHOAX \r\n");
             }
+
+            echo "    HASILNYA  doc_id: {$dokumen_uji} [$KELAS_AKTUAL] adalah {$KELAS_PREDIKSI}. \n";
+            fwrite($log_handle, "    HASILNYA  doc_id: {$dokumen_uji} [$KELAS_AKTUAL] adalah {$KELAS_PREDIKSI}. \r\n");
+
 
             // Hitung Confusision matrix
             if ( $KELAS_AKTUAL == "HOAX" && $KELAS_PREDIKSI == "HOAX" ){
@@ -299,6 +323,13 @@ class KNN extends Controller
 
     }
 
+    /**
+     * Digunakan untuk mendapatkan nilai panjan vektor dokumen
+     * yang ada pada table tf_idfs
+     *
+     * @param $id_dokumen
+     * @return int panjang vektor
+     */
     public function get_panjang_vektor($id_dokumen){
         $vektor = DB::table('tf_idfs')
             ->select(DB::raw('SUM(POW(tf_idfs.tf_idf,2)) AS panjang_vektor'))
@@ -308,7 +339,12 @@ class KNN extends Controller
         return $vektor->panjang_vektor == null ? 0 : $vektor->panjang_vektor;
     }
 
-
+    /**
+     * Digunakan untuk mendaptkan list_dokumen_latih.
+     *
+     * @param array $list_dokumen_uji
+     * @return array list_dokumen_latih
+     */
     public function get_list_dokumen_latih( $list_dokumen_uji = array()){
         $list_dokumen_latih = array();
 
