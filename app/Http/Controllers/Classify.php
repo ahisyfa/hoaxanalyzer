@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\PanjangVektor;
+use App\TfIdf;
 use Illuminate\Http\Request;
 use App\Tdm;
 use App\Df;
-use App\KFold;
 use Illuminate\Support\Facades\DB;
 
 class Classify extends Controller {
@@ -15,21 +16,28 @@ class Classify extends Controller {
         return view('index.index', compact('data'));
     }
 
-    public function submit(){
-        $berita  = $_POST['teks'];
-        $metode  = $_POST['metode'];
+    public function submit(Request $request){
+        $berita  = $request->teks;
+        $metode  = $request->metode;
 
         if ( $metode == 1 ){
             // Metode KNN
-            $this->knn_classifier(5, $berita);
+            return $this->knn_classifier(5, $berita);
         } else if ( $metode == 2 ){
             // Metode Multinomial Naive Bayes
-            $this->mnb_classifier($berita);
+            return $this->mnb_classifier($berita);
         }
 
     }
 
-    public function knn_classifier($k = 5, $teks){
+    public function coba(){
+        // $app = new App\Http\Controllers\Classify(); $app->coba();
+        $kalimat = "Hari aku syantik, cantik bagai bidadari";
+
+        $this->knn_classifier(5, $kalimat);
+    }
+
+    private function knn_classifier($K = 5, $teks){
         // Praproses
         $kalimat = $this->normalization($teks);
         $kalimat = $this->removePunctuation($kalimat);
@@ -37,12 +45,153 @@ class Classify extends Controller {
         $kalimat = $this->removeStopwords($kalimat);
         $terms   = $this->tokenization_unigram($kalimat);
 
-        // Pembobotan (Bisa dilakukan hanya seklai, saat aplikasi akan running)
-        // TfIdf::generate();
+        // Pembobotan tf.idf dokumen uji
+        $tf_idf_uji = $this->generate_tf_idf_dokumen_uji($terms);
+
+        // Mmebuat Sigma Pembilang
+        $sigma_pembilangs = $this->generate_sigma_pembilang($tf_idf_uji);
+
+        // Ambil panjang vektor dokumen uji.
+        $panjang_vektor_uji = $this->get_panjang_vektor_dok_uji($tf_idf_uji);
+
+        // Jarak KNN
+        $jarak_knn = array();
+
+        // Ambil jumlah dokumen latih
+        $N = Tdm::getTotalDocument();
+
+        for($i = 1; $i <= $N; $i++){
+            $sigma_pembilang = $sigma_pembilangs[$i];
+            $pv = PanjangVektor::find($i);
+
+            $jarak = $sigma_pembilang / ($panjang_vektor_uji * $pv->panjang_vektor);
+
+            $jarak_knn[$i] = $jarak;
+
+        }
+
+        // Sorting nilai dari besar ke kecil
+        arsort($jarak_knn);
+
+        // Votting
+        $hoax     = 0;
+        $non_hoax = 0;
+        $banyak_vote = 0;
+
+        // Bobot
+        $bobot_hoax     = 0;
+        $bobot_non_hoax = 0;
 
 
-        $this->helper_knn_classifier($k,$terms);
+        foreach($jarak_knn as $r_doc_id => $r_jarak ){
+            if($banyak_vote == $K ){
+                break;
+            }
 
+            if ( $r_doc_id <= 300 ){
+                $hoax++;
+                $bobot_hoax += $r_jarak;
+            } else {
+                $non_hoax++;
+                $bobot_non_hoax += $r_jarak;
+            }
+
+            $banyak_vote++;
+        }
+
+        $KELAS_PREDIKSI = "";
+
+        if ($hoax > $non_hoax ){
+            $KELAS_PREDIKSI = "HOAX";
+        } else {
+            $KELAS_PREDIKSI = "NONHOAX";
+        }
+
+        $persen_hoax     = ($hoax     / $K) * 100;
+        $persen_non_hoax = ($non_hoax / $K) * 100;
+
+
+        $data = [
+            'KELAS_PREDIKSI'  => $KELAS_PREDIKSI,
+            'N'               => $N,
+            'bobot_hoax'      => $bobot_hoax,
+            'bobot_non_hoax'  => $bobot_non_hoax,
+            'vote_hoax'       => $hoax,
+            'vote_non_hoax'   => $non_hoax,
+            'persen_hoax'     => $persen_hoax,
+            'persen_non_hoax' => $persen_non_hoax,
+        ];
+
+        return view('index.result_knn', $data);
+
+    }
+
+    private function generate_tf_idf_dokumen_uji( & $terms ){
+        $tf_idf_uji = array();
+        $N = Tdm::getTotalDocument();
+
+        foreach ($terms as $term){
+            if ( ! array_key_exists($term, $tf_idf_uji)){
+                $tf_idf_uji[$term] = [
+                    'tf'    => 1,
+                    'df'    => 0,
+                    'idf'   => 0,
+                    'tfidf' => 0,
+                ];
+            } else {
+                $tf_idf_uji[$term]['tf']++;
+            }
+        }
+
+        foreach ($tf_idf_uji as $term => $value ){
+            $df = DB::table('tf_idfs')
+                ->select(DB::raw('COUNT(*) AS df '))
+                ->where('term', $term)
+                ->first();
+
+            $tf_idf_uji[$term]['df']    = $df->df + 1;
+            $tf_idf_uji[$term]['idf']   = log($N / ($df->df + 1), 10);
+            $tf_idf_uji[$term]['tfidf'] = $tf_idf_uji[$term]['tf'] * $tf_idf_uji[$term]['idf'];
+
+        }
+
+        return $tf_idf_uji;
+
+    }
+
+    private function generate_sigma_pembilang( & $tf_idfs ){
+        $matrik_kali_tfidf = array();
+        $sigma_pembilang   = array();
+
+        foreach ($tf_idfs as $term => $value ){
+            // Ambil tfidf dari term ini
+            $terms_tfidf = TfIdf::where('term', $term)->get();
+
+            foreach ($terms_tfidf as $item) {
+                $matrik_kali_tfidf[$term][$item->document] = $tf_idfs[$term]['tfidf'] * $item->tf_idf;
+            }
+
+        }
+
+        for ($i = 1; $i <= 600; $i++){
+            $sigma_pembilang[$i] = 0;
+            foreach ($tf_idfs as $term => $value ){
+                $bobot = isset($matrik_kali_tfidf[$term][$i]) ? $matrik_kali_tfidf[$term][$i] : 0;
+                $sigma_pembilang[$i] += $bobot;
+            }
+        }
+
+        return $sigma_pembilang;
+    }
+
+    private function get_panjang_vektor_dok_uji(& $tf_idfs ){
+        $panjang_vektor = 0;
+
+        foreach ($tf_idfs as $term => $value ){
+            $panjang_vektor += pow($tf_idfs[$term]['tfidf'], 2);
+        }
+
+        return sqrt($panjang_vektor);
     }
 
     public function mnb_classifier($teks){
@@ -53,15 +202,8 @@ class Classify extends Controller {
         $kalimat = $this->removeStopwords($kalimat);
         $terms   = $this->tokenization_unigram($kalimat);
 
-        // Membuat seluruh data yang ada di kopus menjadi data latih
-        // Tdm::updated(['test_data' => false]);
 
-        // Pembobotan & Seleksi Fitur
-        // Df::generate();
-        // Df::updateFeatureSelectionByIdf();
-
-
-        $this->helper_mnb_classifier($terms);
+        return $this->helper_mnb_classifier($terms);
 
     }
 
@@ -83,6 +225,8 @@ class Classify extends Controller {
         $stopwords 	= config('stopwords');
 
         $kalimat = preg_replace($stopwords, "", $string);
+        $kalimat = preg_replace('!\s+!', ' ', $kalimat);
+
         return $kalimat;
     }
 
@@ -156,32 +300,17 @@ class Classify extends Controller {
         }
     }
 
-
-
     public function helper_mnb_classifier($terms = array()){
-        echo "<h1>Klasifikasi Multinomial Naive Bayes</h1>";
 
         // Ambil statistik dokumen
         $jumlah_dokumen_hoax     = Tdm::getTotalDocument(0,'HOAX');
         $jumlah_dokumen_non_hoax = Tdm::getTotalDocument(0,'NONHOAX');
         $total_dokumen           = Tdm::getTotalDocument();
 
-        echo "<h3>Korpus</h3>";
-        echo "<ul>";
-        echo "<li> Jumlah Dokuemen Hoax     : " . $jumlah_dokumen_hoax . "</li>";
-        echo "<li> Jumlah Dokuemen Non Hoax : " . $jumlah_dokumen_non_hoax . "</li>";
-        echo "<li> Jumlah Dokuemen : " . $total_dokumen . "</li>";
-        echo "</ul>";
-
         // Hitung PRIOR
         $peluang_prior_hoax     = log($jumlah_dokumen_hoax     / $total_dokumen, 10);
         $peluang_prior_non_hoax = log($jumlah_dokumen_non_hoax / $total_dokumen, 10);
 
-        echo "<h3>Peluang Prior</h3>";
-        echo "<ul>";
-        echo "<li> Peluang Prior Hoax     : " . $peluang_prior_hoax . "</li>";
-        echo "<li> Peluang Prior  Non Hoax : " . $peluang_prior_non_hoax . "</li>";
-        echo "</ul>";
 
         // Peluang
         $peluang_hoax     = $peluang_prior_hoax;
@@ -192,15 +321,12 @@ class Classify extends Controller {
         $jumlah_term_dokumen_non_hoax    = $this->get_jumlah_term_dokumen_non_hoax();
         $jumlah_term_unik_dokumen_latih  = $this->get_jumlah_term_unik_dokumen_latih();
 
-        echo "<h3>Term : </h3>";
-        echo "<ol>";
+
         foreach ($terms as $term) {
             // Jika term tidak terseleksi fitur, maka tidak dilakukan perhitungan
             if ( ! $this->is_selected( $term ) ){
                 continue;
             }
-
-            echo "<li> {$term} </li>";
 
             $frekuensi_term_di_hoax     = $this->get_frekuensi_kata_dalam_kelas( $term, "HOAX");
             $frekuensi_term_di_non_hoax = $this->get_frekuensi_kata_dalam_kelas( $term, "NONHOAX");
@@ -209,84 +335,35 @@ class Classify extends Controller {
             $peluang_non_hoax += log(( $frekuensi_term_di_non_hoax + 1 ) / ( $jumlah_term_dokumen_non_hoax +  $jumlah_term_unik_dokumen_latih ), 10) ;
 
         }
-        echo "</ol>";
 
-        echo "Peluang Hoax     : " . $peluang_hoax . "<br/>";
-        echo "Peluang Non Hoax : " . $peluang_non_hoax . "<br/>";
+        $KELAS_PREDIKSI = "";
+
 
         if ( $peluang_hoax > $peluang_non_hoax ){
-            echo "<h2>Berita tersebut adalah HOAX</h2>";
+            $KELAS_PREDIKSI = "HOAX";
         } else {
-            echo "<h2>Berita tersebut BUKAN HOAX</h2>";
+            $KELAS_PREDIKSI = "BUKAN HOAX";
         }
+
+        $jumlah_peluang = $peluang_hoax + $peluang_non_hoax;
+
+        $peluang_hoax_dalam_positif     = $jumlah_peluang - $peluang_hoax;
+        $peluang_non_hoax_dalam_positif = $jumlah_peluang - $peluang_non_hoax;
+
+        $persen_peluang_hoax     = ($peluang_hoax_dalam_positif     / $jumlah_peluang) * 100;
+        $persen_peluang_non_hoax = ($peluang_non_hoax_dalam_positif / $jumlah_peluang) * 100;
+
+        $data = [
+            'KELAS_PREDIKSI'   => $KELAS_PREDIKSI,
+            'peluang_hoax'     => $peluang_hoax,
+            'peluang_non_hoax' => $peluang_non_hoax,
+            'persen_peluang_hoax'     => $persen_peluang_hoax,
+            'persen_peluang_non_hoax' => $persen_peluang_non_hoax,
+        ];
+
+        return view('index.result_mnnb', $data);
 
     }
 
-    public function helper_knn_classifier($K, $terms = array()){
-        echo "<h1>Klasifikasi K-Nearest Neighbour</h1>";
-
-        // Ambil statistik dokumen
-        $jumlah_dokumen_hoax     = Tdm::getTotalDocument(0,'HOAX');
-        $jumlah_dokumen_non_hoax = Tdm::getTotalDocument(0,'NONHOAX');
-        $total_dokumen           = Tdm::getTotalDocument();
-
-        echo "<h3>Korpus</h3>";
-        echo "<ul>";
-        echo "<li> Jumlah Dokuemen Hoax     : " . $jumlah_dokumen_hoax . "</li>";
-        echo "<li> Jumlah Dokuemen Non Hoax : " . $jumlah_dokumen_non_hoax . "</li>";
-        echo "<li> Jumlah Dokuemen : " . $total_dokumen . "</li>";
-        echo "</ul>";
-
-        echo "<h3>Term : </h3>";
-        echo "<ol>";
-//        foreach ($terms as $term) {
-//            // Jika term tidak terseleksi fitur, maka tidak dilakukan perhitungan
-//            if ( ! $this->is_selected( $term ) ){
-//                continue;
-//            }
-//
-//            echo "<li> {$term} </li>";
-//
-//        }
-        echo "</ol>";
-
-        $TF_IDF = array();
-
-        $dfs = Df::where('feature_selection', true)->get();
-        foreach ($dfs as $df) {
-
-            $tdms = Tdm::where('test_data', false)->where('term', $df->term)->get();
-
-            foreach ($tdms as $tdm) {
-
-                $TF_IDF[$tdm->term] = array(
-                    'freq'     => $tdm->frequency,
-                    'df'       => $df->df,
-                );
-
-            }
-
-        }
-
-        foreach ($terms as $term) {
-            if ( array_key_exists($term, $TF_IDF) ){
-                $TF_IDF[$term]['freq']++;
-                $TF_IDF[$term]['df']++;
-            } else {
-                $TF_IDF[$term] = array(
-                    'freq'     => 1,
-                    'df'       => 1,
-                );
-            }
-        }
-
-
-
-        print_r($TF_IDF);
-
-
-
-
-    }
 
 }

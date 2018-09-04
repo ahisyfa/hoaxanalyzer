@@ -32,7 +32,7 @@ class SigmaPembilang extends Model
 
                 $sp->save();
 
-                echo "SigmaPembilang::generate(dok_uji {$dokumen_uji}) -> Proses {$tf_idf->term} : {$item->document} \r\n";
+                // echo "SigmaPembilang::generate(dok_uji {$dokumen_uji}) -> Proses {$tf_idf->term} : {$item->document} \r\n";
             }
         }
     }

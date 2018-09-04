@@ -27,7 +27,7 @@ class TfIdf extends BaseModel
 				$tfidf->class = $tdm->class;
 				$tfidf->save();
 
-                echo "TfIdf::generate() -> memproses term : {$tdm->term}, dokumen {$tdm->document}\r\n";
+                // echo "TfIdf::generate() -> memproses term : {$tdm->term}, dokumen {$tdm->document}\r\n";
 			}
 
 		}

@@ -23,7 +23,7 @@ class Df extends BaseModel
             $object_df->df = $df->df;
             $object_df->idf = log($N / $df->df, 10);
             $object_df->save();
-            echo "Df::generate() -> N = {$N}, Memproses term : {$df->term} \r\n";
+            // echo "Df::generate() -> N = {$N}, Memproses term : {$df->term} \r\n";
 		}
 
 		return true;

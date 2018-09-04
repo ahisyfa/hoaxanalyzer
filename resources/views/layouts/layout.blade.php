@@ -1,7 +1,7 @@
 <html>
 	<head>
-		<link rel="icon" type="image/ico" href="/images/favicon.ico"/>
 		<title>KNN Hoax Analyzer</title>
+		<link rel="icon" type="image/ico" href="images/favicon.ico"/>
 		<link href="css/main.css" rel="stylesheet" type="text/css">
 		<link href="css/bootstrap.css" rel="stylesheet" type="text/css" media="all" />
 		<link href="css/easy-responsive-tabs.css" rel='stylesheet' type='text/css'/>
