@@ -24,13 +24,13 @@ class KNN extends Controller
     /**
      * Akses poi untuk memulai penelitin.
      *
-     * c
+     * $knn = new App\Http\Controllers\KNN(); $knn->run();
      *
      * @param int $K banyaknya k pada KNNN
      */
     public function run($K = 5){
         echo "KNN::run({$K}) \r\n";
-        for ($i = 1; $i <= 10; $i++){
+        for ($i = 1; $i <= 1; $i++){
             $this->doClassify($K, $i);
         }
     }
@@ -128,7 +128,10 @@ class KNN extends Controller
             // Hitung sigma Pembilang
             SigmaPembilang::generate($dokumen_uji);
 
-            // Ambil data
+            // Hitung panjang vektor
+            PanjangVektor::generate();
+
+            // Ambil panjang vektor dokumen uji
             $panjang_vektor_uji = $this->get_panjang_vektor($dokumen_uji);
 
             // Array jarak
@@ -187,7 +190,6 @@ class KNN extends Controller
 
             echo "    HASILNYA  doc_id: {$dokumen_uji} [$KELAS_AKTUAL] adalah {$KELAS_PREDIKSI}. \n";
             fwrite($log_handle, "    HASILNYA  doc_id: {$dokumen_uji} [$KELAS_AKTUAL] adalah {$KELAS_PREDIKSI}. \r\n");
-
 
             // Hitung Confusision matrix
             if ( $KELAS_AKTUAL == "HOAX" && $KELAS_PREDIKSI == "HOAX" ){
@@ -331,12 +333,9 @@ class KNN extends Controller
      * @return int panjang vektor
      */
     public function get_panjang_vektor($id_dokumen){
-        $vektor = DB::table('tf_idfs')
-            ->select(DB::raw('SUM(POW(tf_idfs.tf_idf,2)) AS panjang_vektor'))
-            ->where('document', $id_dokumen)
-            ->first();
+        $pv = PanjangVektor::find($id_dokumen);
 
-        return $vektor->panjang_vektor == null ? 0 : $vektor->panjang_vektor;
+        return $pv->panjang_vektor;
     }
 
     /**
