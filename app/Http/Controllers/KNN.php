@@ -30,7 +30,7 @@ class KNN extends Controller
      */
     public function run($K = 5){
         echo "KNN::run({$K}) \r\n";
-        for ($i = 1; $i <= 1; $i++){
+        for ($i = 1; $i <= 10; $i++){
             $this->doClassify($K, $i);
         }
     }
