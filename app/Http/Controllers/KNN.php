@@ -48,7 +48,7 @@ class KNN extends Controller
         $time_start = microtime(true);
 
         $file_log_name = $fold . "_knn_" . date("Ymd_His") . '.txt';
-        $log_handle    = fopen("hasil_penelitian\\" . $file_log_name, 'a') or die('Cannot open file:  '.$file_log_name);
+        $log_handle    = fopen("hasil_penelitian" . DIRECTORY_SEPARATOR . $file_log_name, 'a') or die('Cannot open file:  '.$file_log_name);
         fwrite($log_handle, "Startting KNN Classification \r\n");
         fwrite($log_handle, "---------------------------- \r\n");
         fwrite($log_handle, "Waktu penelitian : ". date("Y-m-d H:i:s") . "\r\n");
