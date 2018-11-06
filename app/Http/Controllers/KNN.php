@@ -28,7 +28,7 @@ class KNN extends Controller
      *
      * @param int $K banyaknya k pada KNNN
      */
-    public function run($K = 5){
+    public function run($K = 11){
         echo "KNN::run({$K}) \r\n";
         for ($i = 1; $i <= 10; $i++){
             $this->doClassify($K, $i);
@@ -42,7 +42,7 @@ class KNN extends Controller
      * @param int $fold
      * @return int
      */
-    public function doClassify($K  = 5, $fold = 1){
+    public function doClassify($K  = 11, $fold = 1){
         echo "KNN::doClassify(K={$K}, Fold={$fold}) \r\n";
 
         $time_start = microtime(true);
@@ -121,6 +121,12 @@ class KNN extends Controller
 
             echo "knnClassifier :: Sedang memproses dokumen uji : {$dokumen_uji} \r\n";
             $this->seleksi_fitur($dokumen_uji, $list_dokumen_uji);
+
+            // Hanya untuk keperluan analisis seleksi fitur
+            $this->analisis_seleksi_fitur($dokumen_uji, $log_handle);
+            continue;
+            // Akhir analisis seleksi fitur
+            // -----------------------------
 
             // Melakukan perhitungan pembobotan tf.idf
             TfIdf::generate();
@@ -354,6 +360,17 @@ class KNN extends Controller
         }
 
         return $list_dokumen_latih;
+    }
+
+
+    public function analisis_seleksi_fitur($dokumen_uji, & $log_handle){
+        $jumlah_term_unik       = Df::count();
+        $jumlah_term_terseleksi = Df::where('feature_selection', '=', 1)->count();
+
+        fwrite($log_handle, "   - Doc {$dokumen_uji} \r\n");
+        fwrite($log_handle, "   - ID_DOC | JUMLAH_FITUR | TERSELEKSI \r\n");
+        fwrite($log_handle, "   - {$dokumen_uji} | {$jumlah_term_unik} | {$jumlah_term_terseleksi} \r\n");
+
     }
 
 }
