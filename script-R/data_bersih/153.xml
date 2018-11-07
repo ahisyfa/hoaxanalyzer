@@ -1,0 +1,32 @@
+<DOC>
+	<DOCNO>153</DOCNO>
+	<LABLE>HOAX</LABLE>
+	<URL>http://monthlytech.com/2-trik-terbaru-mempercepat-koneksi-internet-dengan-cmd/</URL>
+	<AUTHOR></AUTHOR>
+	<TITLE>2 trik terbaru mempercepat koneksi internet dengan cmd</TITLE>
+	<TEXT>2 trik terbaru mempercepat koneksi internet dengan cmd
+
+cara mempercepat koneksi internet dengan cmd - Artikel Tips Trik internet kali ini merupakan artikel pelengkap dari cara mempercepat koneksi interent wifi karna untuk mempercepat koneksi internet kita harus menggunakan berbagai trik agar koneksi kita bisa stabil sesuai harapan.
+
+Untuk melakukan cara mempercepat koneksi internet via cmd anda harus membuka cmd administrator. Jika anda belum tau cara membukanya cmd, silakan anda b2aca tutorial sebelumnya Cara Membuka CMD Di Windows 7/8/10. Jika anda sudah bisa membuka Cmd saat anda mempraktekkan Cara mempercepat koneksi internet melalui CMD.
+
+Koneksi internet yang cepat tentu saja akan membuat nyaman saat anda berselancar di dunia internet. Pekerjaan pun terasa mudah dan aktifitas di internet menjadi sangat mengasyikan seperti misalnya live streaming atau pun download file, program, mp3, atau pun video. Silahkan baca triknya dibawah ini :
+Berikut ini Cara mempercepat koneksi internet dari cmd:
+Cara Mempercepat Koneksi Internet lewat CMD
+Pertama anda harus membuka cmd administrator jika belum tau silakan baca disini
+Setelah itu ketikkan perintah ipconfig/all pada monitor CMD
+Carilah DNS Servers, lantas anda tulis supaya gampang di ingat. Kita contohkan saja DNS servers-nya 8. 8. 8. 8 jadi selanjutnya anda ketikkan perintah di cmd ping -l 50000 8. 8. 8. 8 -t
+Jika anda sudah melakukan step by step di atas dengan benar.  Biarlah  CMD tetap runing atau berjalan oh jangan di close cmd anda hanya perlu meminimize saja.
+Cara Mempercepat Koneksi Internet dari CMD
+Pertama anda harus membuka cmd administrator jika belum tau silakan baca  disini
+Apabila cmd sudah terbuka, maka selanjutnya anda rubah alamat drive  ke drive C : , dengan cara  mengetik  cd  C/ lantas Enter
+Selanjutnya anda ketika perintah di CMD yang terbuka  netsh interface tcp set global autotuning=disabled
+WARNING
+
+BUAT YANG INGIN MENORMALKAN KEMBALI CUKUP LAKUKAN HAL BERIKUT 
+ketik 
+netsh interface tcp set global autotuning=normal 
+ingat, mesti run as administrator
+
+Demikianlah  cara mempercepat koneksi internet di komputer melalui cmd dan jangan lupa baca CARA MENGEMBALIKAN FILE YANG TERHAPUS TANPA MENGGUNAKAN SOFTWARE</TEXT>
+</DOC>
